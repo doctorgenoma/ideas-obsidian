@@ -340,6 +340,44 @@
     min-height:10px;
   }
 
+  .icon-row{ display:flex; gap:12px; align-items:center; }
+  #iconPreview{
+    width:72px; height:72px;
+    border:3px solid var(--light-gray);
+    border-radius:16px;
+    background:var(--deep-blue);
+    object-fit:cover;
+    flex:none;
+  }
+  .icon-controls{ flex:1; display:flex; flex-direction:column; gap:8px; }
+  .btn-file{
+    display:block;
+    text-align:center;
+    font-family:'Press Start 2P', monospace;
+    font-size:9px;
+    padding:10px 8px;
+    background:var(--orange);
+    color:var(--black);
+    border:3px solid var(--black);
+    box-shadow:0 4px 0 var(--brown);
+    cursor:pointer;
+  }
+  .btn-file:active{ box-shadow:0 1px 0 var(--brown); transform:translateY(3px); }
+  .emoji-row{ display:flex; gap:6px; align-items:center; }
+  #iconEmoji{ width:56px; text-align:center; font-size:22px; padding:2px 4px; flex:none; }
+  #iconColor{
+    width:44px; height:38px; padding:0; flex:none;
+    border:3px solid var(--light-gray); background:var(--black); cursor:pointer;
+  }
+  .btn-mini{
+    flex:1;
+    font-size:8px;
+    padding:10px 6px;
+    background:var(--light-gray);
+    box-shadow:0 4px 0 var(--dark-gray);
+  }
+  .btn-mini:active{ box-shadow:0 1px 0 var(--dark-gray); transform:translateY(3px); }
+
   details{ margin-top:14px; color:var(--light-gray); }
   summary{
     font-family:'Press Start 2P', monospace;
@@ -383,6 +421,21 @@
     <label class="field-label" for="vaultInput">NOMBRE DEL VAULT</label>
     <input type="text" id="vaultInput" placeholder="Ej: Podcasting" autocomplete="off" autocapitalize="off" spellcheck="false">
     <p class="hint">Debe coincidir exactamente con el nombre de tu vault.</p>
+
+    <label class="field-label">ICONO DE LA APP</label>
+    <div class="icon-row">
+      <img id="iconPreview" src="icon.png" alt="Icono" width="72" height="72">
+      <div class="icon-controls">
+        <label class="btn-file" for="iconFile">ELEGIR IMAGEN</label>
+        <input type="file" id="iconFile" accept="image/*" hidden>
+        <div class="emoji-row">
+          <input type="text" id="iconEmoji" placeholder="🙂" aria-label="Emoji">
+          <input type="color" id="iconColor" value="#1D2B53" aria-label="Color de fondo">
+          <button type="button" class="btn-mini" id="iconReset">QUITAR</button>
+        </div>
+      </div>
+    </div>
+    <p class="hint">Elige una imagen, o un emoji con color de fondo. Hazlo en Safari <b>antes</b> de "Añadir a pantalla de inicio".</p>
 
     <label class="field-label">NOTAS DE DESTINO</label>
     <div id="notesList"></div>
@@ -695,6 +748,80 @@
   document.getElementById('saveBtn').addEventListener('click', saveSetup);
   cancelBtn.addEventListener('click', closeSetup);
   document.getElementById('cfgBtn').addEventListener('click', openSetup);
+
+  /* ---------- Icono de la app (pantalla de inicio) ---------- */
+  const ICON_KEY = 'ideaVaultIcon.v1';
+  const ICON_SIZE = 180; // tamaño que usa iOS para apple-touch-icon
+  const iconPreview = document.getElementById('iconPreview');
+  const iconFile    = document.getElementById('iconFile');
+  const iconEmoji   = document.getElementById('iconEmoji');
+  const iconColor   = document.getElementById('iconColor');
+
+  function applyIcon(dataUrl){
+    // iOS lee este <link> en el momento de "Añadir a pantalla de inicio"
+    const href = dataUrl || 'icon.png';
+    document.querySelectorAll('link[rel="apple-touch-icon"], link[rel="icon"]').forEach(l => {
+      l.href = href;
+    });
+    iconPreview.src = href;
+  }
+
+  function storeIcon(dataUrl){
+    try{
+      if (dataUrl) localStorage.setItem(ICON_KEY, dataUrl);
+      else localStorage.removeItem(ICON_KEY);
+    }catch(e){}
+    applyIcon(dataUrl);
+  }
+
+  function newCanvas(){
+    const c = document.createElement('canvas');
+    c.width = c.height = ICON_SIZE;
+    return c;
+  }
+
+  function iconFromImage(img){
+    const c = newCanvas(), ctx = c.getContext('2d');
+    ctx.fillStyle = '#000';               // iOS no admite transparencia
+    ctx.fillRect(0, 0, ICON_SIZE, ICON_SIZE);
+    // recorte cuadrado centrado ("cover")
+    const s = Math.min(img.width, img.height);
+    const sx = (img.width - s) / 2, sy = (img.height - s) / 2;
+    ctx.drawImage(img, sx, sy, s, s, 0, 0, ICON_SIZE, ICON_SIZE);
+    storeIcon(c.toDataURL('image/png'));
+  }
+
+  function iconFromEmoji(){
+    const emoji = Array.from(iconEmoji.value.trim())[0];
+    if (!emoji) return;
+    const c = newCanvas(), ctx = c.getContext('2d');
+    ctx.fillStyle = iconColor.value;
+    ctx.fillRect(0, 0, ICON_SIZE, ICON_SIZE);
+    ctx.font = '104px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(emoji, ICON_SIZE / 2, ICON_SIZE / 2 + 8);
+    storeIcon(c.toDataURL('image/png'));
+  }
+
+  iconFile.addEventListener('change', () => {
+    const f = iconFile.files && iconFile.files[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => { iconFromImage(img); URL.revokeObjectURL(url); };
+    img.onerror = () => { errorMsg.textContent = 'NO SE PUDO LEER LA IMAGEN'; URL.revokeObjectURL(url); };
+    img.src = url;
+    iconFile.value = '';
+  });
+  iconEmoji.addEventListener('input', iconFromEmoji);
+  iconColor.addEventListener('input', iconFromEmoji);
+  document.getElementById('iconReset').addEventListener('click', () => {
+    iconEmoji.value = '';
+    storeIcon(null);
+  });
+
+  try{ applyIcon(localStorage.getItem(ICON_KEY)); }catch(e){}
 
   /* ---------- Arranque ---------- */
   if (config) sessionLog = config.notes.map(() => []);
