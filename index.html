@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IDEA VAULT // Captura rápida para Obsidian</title>
+
+<!-- ===== Icono de la app para "Añadir a pantalla de inicio" ===== -->
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Idea Vault">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1D2B53">
+<!-- ================================================================ -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --black:      #000000;
+    --deep-blue:  #1D2B53;
+    --purple:     #7E2553;
+    --dark-green: #008751;
+    --brown:      #AB5236;
+    --dark-gray:  #5F574F;
+    --light-gray: #C2C3C7;
+    --white:      #FFF1E8;
+    --red:        #FF004D;
+    --orange:     #FFA300;
+    --yellow:     #FFEC27;
+    --green:      #00E436;
+    --blue:       #29ADFF;
+    --indigo:     #83769C;
+    --pink:       #FF77A8;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:var(--deep-blue);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 4px);
+    color:var(--white);
+    font-family:'VT323', monospace;
+    font-size:22px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    image-rendering:pixelated;
+  }
+
+  .console{
+    width:100%;
+    max-width:460px;
+    background:var(--black);
+    border:6px solid var(--white);
+    box-shadow:
+      0 0 0 6px var(--black),
+      8px 8px 0 6px rgba(0,0,0,0.5);
+    padding:18px;
+  }
+
+  .screen{
+    background:#0a0a1a;
+    border:4px solid var(--dark-gray);
+    box-shadow:
+      inset 0 0 0 4px var(--black),
+      inset 0 0 20px rgba(0,228,54,0.08);
+    padding:16px;
+  }
+
+  .cartridge-label{
+    font-family:'Press Start 2P', monospace;
+    font-size:9px;
+    color:var(--indigo);
+    text-align:center;
+    letter-spacing:1px;
+    margin-bottom:6px;
+  }
+
+  h1{
+    font-family:'Press Start 2P', monospace;
+    font-size:15px;
+    line-height:1.6;
+    color:var(--yellow);
+    text-align:center;
+    text-shadow: 2px 2px 0 var(--brown);
+    margin:0 0 16px 0;
+    word-break:break-word;
+  }
+
+  /* ---------- Botones de notas ---------- */
+  .tabs{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    justify-content:center;
+    margin-bottom:16px;
+  }
+  .tab{
+    font-family:'Press Start 2P', monospace;
+    font-size:8px;
+    line-height:1.4;
+    padding:8px 10px;
+    background:var(--dark-gray);
+    color:var(--light-gray);
+    border:3px solid var(--black);
+    box-shadow: 3px 3px 0 var(--black);
+    cursor:pointer;
+    user-select:none;
+    word-break:break-word;
+  }
+  .tab:hover{ background:var(--indigo); }
+  .tab.active{
+    background:var(--dark-green);
+    color:var(--white);
+    box-shadow: 1px 1px 0 var(--black);
+    transform:translate(2px,2px);
+  }
+
+  textarea{
+    width:100%;
+    min-height:70px;
+    resize:vertical;
+    background:var(--black);
+    color:var(--green);
+    caret-color:var(--green);
+    border:3px solid var(--light-gray);
+    box-shadow: inset 3px 3px 0 rgba(255,255,255,0.05);
+    font-family:'VT323', monospace;
+    font-size:22px;
+    padding:10px;
+    outline:none;
+  }
+  textarea:focus{ border-color:var(--yellow); }
+  textarea::placeholder{ color:var(--dark-gray); }
+
+  .btn-row{
+    display:flex;
+    gap:10px;
+    margin-top:12px;
+  }
+  button{
+    font-family:'Press Start 2P', monospace;
+    font-size:10px;
+    padding:14px 10px;
+    cursor:pointer;
+    color:var(--black);
+    border:3px solid var(--black);
+  }
+  .btn-add{
+    flex:1;
+    background:var(--green);
+    box-shadow: 0 5px 0 var(--dark-green);
+  }
+  .btn-add:active{
+    box-shadow: 0 2px 0 var(--dark-green);
+    transform:translateY(3px);
+  }
+  .btn-cfg{
+    background:var(--orange);
+    box-shadow: 0 5px 0 var(--brown);
+    width:52px;
+  }
+  .btn-cfg:active{
+    box-shadow: 0 2px 0 var(--brown);
+    transform:translateY(3px);
+  }
+
+  .log-title{
+    font-family:'Press Start 2P', monospace;
+    font-size:8px;
+    color:var(--pink);
+    margin:20px 0 8px 0;
+    text-align:center;
+  }
+  .log{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    max-height:160px;
+    overflow-y:auto;
+    padding-right:4px;
+  }
+  .log-item{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    background:rgba(255,255,255,0.03);
+    border-left:4px solid var(--green);
+    padding:6px 8px;
+    animation: slide-in 0.25s steps(6) both;
+  }
+  .log-item .box{ color:var(--green); }
+  .log-item span{
+    font-family:'VT323', monospace;
+    font-size:22px;
+    line-height:1;
+  }
+
+  @keyframes slide-in{
+    from{ transform:translateX(30px); opacity:0; }
+    to{ transform:translateX(0); opacity:1; }
+  }
+
+  .toast{
+    font-family:'Press Start 2P', monospace;
+    font-size:9px;
+    color:var(--dark-green);
+    text-align:center;
+    height:14px;
+    margin-top:10px;
+    visibility:hidden;
+  }
+  .toast.show{ visibility:visible; }
+
+  /* ---------- Modal ---------- */
+  .modal-bg{
+    position:fixed; inset:0;
+    background:rgba(0,0,0,0.8);
+    display:none;
+    align-items:flex-start;
+    justify-content:center;
+    padding:16px;
+    z-index:10;
+    overflow-y:auto;
+  }
+  .modal-bg.open{ display:flex; }
+  .modal{
+    background:var(--black);
+    border:5px solid var(--white);
+    box-shadow: 6px 6px 0 var(--purple);
+    padding:18px;
+    max-width:460px;
+    width:100%;
+    margin:auto 0;
+    font-size:18px;
+  }
+  .modal h2{
+    font-family:'Press Start 2P', monospace;
+    font-size:11px;
+    line-height:1.6;
+    color:var(--yellow);
+    margin-top:0;
+  }
+  .modal p{ color:var(--light-gray); line-height:1.3; margin:8px 0; }
+  .modal code{
+    background:#111;
+    color:var(--green);
+    padding:1px 4px;
+  }
+  .modal a{ color:var(--blue); }
+
+  .field-label{
+    display:block;
+    font-family:'Press Start 2P', monospace;
+    font-size:8px;
+    color:var(--pink);
+    margin:12px 0 6px;
+  }
+  .hint{ font-size:16px; color:var(--indigo); margin:4px 0 0; }
+
+  input[type=text], select{
+    width:100%;
+    background:var(--black);
+    color:var(--green);
+    caret-color:var(--green);
+    border:3px solid var(--light-gray);
+    font-family:'VT323', monospace;
+    font-size:20px;
+    padding:6px 8px;
+    outline:none;
+    border-radius:0;
+  }
+  input[type=text]:focus, select:focus{ border-color:var(--yellow); }
+  input::placeholder{ color:var(--dark-gray); }
+
+  .note-card{
+    border:3px solid var(--dark-gray);
+    background:rgba(255,255,255,0.03);
+    padding:8px 10px 10px;
+    margin-top:10px;
+    position:relative;
+  }
+  .note-card .num{
+    font-family:'Press Start 2P', monospace;
+    font-size:8px;
+    color:var(--yellow);
+    margin-bottom:2px;
+  }
+  .note-card .mini-label{
+    font-family:'Press Start 2P', monospace;
+    font-size:7px;
+    color:var(--indigo);
+    display:block;
+    margin:8px 0 4px;
+  }
+  .btn-del{
+    position:absolute;
+    top:6px; right:6px;
+    padding:6px 8px;
+    font-size:9px;
+    background:var(--red);
+    color:var(--white);
+    box-shadow:0 3px 0 var(--purple);
+  }
+  .btn-del:active{ box-shadow:0 1px 0 var(--purple); transform:translateY(2px); }
+
+  .btn-addnote{
+    width:100%;
+    margin-top:12px;
+    background:var(--blue);
+    box-shadow:0 5px 0 var(--deep-blue);
+  }
+  .btn-addnote:active{ box-shadow:0 2px 0 var(--deep-blue); transform:translateY(3px); }
+
+  .btn-save{
+    flex:1;
+    background:var(--green);
+    box-shadow:0 5px 0 var(--dark-green);
+  }
+  .btn-save:active{ box-shadow:0 2px 0 var(--dark-green); transform:translateY(3px); }
+  .btn-cancel{
+    background:var(--light-gray);
+    box-shadow:0 5px 0 var(--dark-gray);
+  }
+  .btn-cancel:active{ box-shadow:0 2px 0 var(--dark-gray); transform:translateY(3px); }
+
+  .error{
+    font-family:'Press Start 2P', monospace;
+    font-size:8px;
+    line-height:1.6;
+    color:var(--red);
+    margin-top:10px;
+    min-height:10px;
+  }
+
+  details{ margin-top:14px; color:var(--light-gray); }
+  summary{
+    font-family:'Press Start 2P', monospace;
+    font-size:8px;
+    color:var(--orange);
+    cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="console">
+  <div class="screen">
+
+    <div class="cartridge-label">IDEA VAULT CARTRIDGE</div>
+    <h1 id="noteTitle"></h1>
+
+    <div class="tabs" id="tabs"></div>
+
+    <textarea id="ideaInput" placeholder="Escribe tu idea..." autofocus></textarea>
+
+    <div class="btn-row">
+      <button class="btn-add" id="addBtn">AÑADIR</button>
+      <button class="btn-cfg" id="cfgBtn" title="Configurar notas">⚙</button>
+    </div>
+
+    <div class="toast" id="toast">GUARDADO EN OBSIDIAN!</div>
+
+    <div class="log-title">ÚLTIMAS IDEAS DE ESTA SESIÓN</div>
+    <div class="log" id="log"></div>
+
+  </div>
+</div>
+
+<!-- ---------- Modal de configuración ---------- -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2 id="setupTitle">CONFIGURACIÓN INICIAL</h2>
+    <p>Esta app usa el plugin comunitario <code>Advanced URI</code> de Obsidian (Ajustes → Community plugins) para insertar tus ideas como tareas (<code>- [ ] texto</code>) al principio o al final de cada nota.</p>
+
+    <label class="field-label" for="vaultInput">NOMBRE DEL VAULT</label>
+    <input type="text" id="vaultInput" placeholder="Ej: Podcasting" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <p class="hint">Debe coincidir exactamente con el nombre de tu vault.</p>
+
+    <label class="field-label">NOTAS DE DESTINO</label>
+    <div id="notesList"></div>
+    <button class="btn-addnote" id="addNoteBtn" type="button">+ AÑADIR NOTA</button>
+
+    <details>
+      <summary>¿CÓMO RELLENARLO?</summary>
+      <p><code>Nombre del botón</code> → lo que verás en la app. Si lo dejas vacío se usa el nombre del archivo.</p>
+      <p><code>Ruta de la nota</code> → relativa a la raíz del vault y sin ".md". Ej: <code>Carpeta/Mi nota</code>.</p>
+      <p><code>Dónde insertar</code> → "Al principio" (la idea más reciente arriba) o "Al final".</p>
+      <p>Puedes volver a editar todo con el botón ⚙. La configuración se guarda en este dispositivo y navegador.</p>
+    </details>
+
+    <div class="error" id="errorMsg"></div>
+
+    <div class="btn-row">
+      <button class="btn-cancel" id="cancelBtn" type="button">CANCELAR</button>
+      <button class="btn-save" id="saveBtn" type="button">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ============================================================
+     IDEA VAULT · PLANTILLA CONFIGURABLE
+     La configuración (vault + notas) se guarda en localStorage.
+     Al abrir la app por primera vez aparece el asistente.
+  ============================================================ */
+  const STORAGE_KEY = 'ideaVaultConfig.v1';
+
+  let config = loadConfig();   // { vault: string, notes: [{name,file,mode}] } | null
+  let activeIndex = 0;
+  let sessionLog = [];
+
+  const tabsEl   = document.getElementById('tabs');
+  const titleEl  = document.getElementById('noteTitle');
+  const inputEl  = document.getElementById('ideaInput');
+  const logEl    = document.getElementById('log');
+  const toastEl  = document.getElementById('toast');
+  const addBtn   = document.getElementById('addBtn');
+
+  const modalBg   = document.getElementById('modalBg');
+  const setupTitle= document.getElementById('setupTitle');
+  const vaultInput= document.getElementById('vaultInput');
+  const notesList = document.getElementById('notesList');
+  const errorMsg  = document.getElementById('errorMsg');
+  const cancelBtn = document.getElementById('cancelBtn');
+
+  /* ---------- Persistencia ---------- */
+  function loadConfig(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const cfg = JSON.parse(raw);
+      if (cfg && cfg.vault && Array.isArray(cfg.notes) && cfg.notes.length) return cfg;
+    }catch(e){}
+    return null;
+  }
+  function saveConfig(cfg){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); }catch(e){}
+  }
+
+  /* ---------- Pantalla principal ---------- */
+  function renderTabs(){
+    tabsEl.innerHTML = '';
+    if (!config) return;
+    config.notes.forEach((note, i) => {
+      const tab = document.createElement('div');
+      tab.className = 'tab' + (i === activeIndex ? ' active' : '');
+      tab.textContent = note.name.toUpperCase();
+      tab.addEventListener('click', () => {
+        activeIndex = i;
+        render();
+      });
+      tabsEl.appendChild(tab);
+    });
+  }
+
+  function renderLog(){
+    logEl.innerHTML = '';
+    if (!config) return;
+    (sessionLog[activeIndex] || []).slice().reverse().forEach(text => {
+      const row = document.createElement('div');
+      row.className = 'log-item';
+      const box = document.createElement('span');
+      box.className = 'box';
+      box.textContent = '☐';
+      const txt = document.createElement('span');
+      txt.textContent = text;
+      row.appendChild(box);
+      row.appendChild(txt);
+      logEl.appendChild(row);
+    });
+  }
+
+  function render(){
+    if (!config){
+      titleEl.textContent = 'SIN CONFIGURAR';
+      tabsEl.innerHTML = '';
+      logEl.innerHTML = '';
+      addBtn.disabled = true;
+      return;
+    }
+    addBtn.disabled = false;
+    titleEl.textContent = config.notes[activeIndex].name;
+    renderTabs();
+    renderLog();
+    inputEl.focus();
+  }
+
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(showToast.t);
+    showToast.t = setTimeout(() => toastEl.classList.remove('show'), 2200);
+  }
+
+  function addIdea(){
+    if (!config) { openSetup(); return; }
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    const note = config.notes[activeIndex];
+    const mode = note.mode === 'append' ? 'append' : 'prepend';
+
+    // Tarea de Obsidian con casilla marcable
+    const data = `- [ ] ${text}\n`;
+
+    // encodeURIComponent a mano (no URLSearchParams): este último codifica
+    // los espacios como "+" y Obsidian los interpretaría literalmente.
+    const uri = `obsidian://advanced-uri?vault=${encodeURIComponent(config.vault)}&filepath=${encodeURIComponent(note.file)}&data=${encodeURIComponent(data)}&mode=${mode}`;
+
+    window.location.href = uri;
+
+    sessionLog[activeIndex].push(text);
+    renderLog();
+
+    inputEl.value = '';
+    inputEl.focus();
+    showToast('GUARDADO EN OBSIDIAN!');
+  }
+
+  addBtn.addEventListener('click', addIdea);
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      addIdea();
+    }
+  });
+
+  /* ---------- Asistente de configuración ---------- */
+  function addNoteRow(note){
+    note = note || { name:'', file:'', mode:'prepend' };
+    const card = document.createElement('div');
+    card.className = 'note-card';
+
+    const num = document.createElement('div');
+    num.className = 'num';
+    card.appendChild(num);
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'btn-del';
+    del.textContent = 'X';
+    del.title = 'Quitar nota';
+    del.addEventListener('click', () => {
+      card.remove();
+      renumberRows();
+    });
+    card.appendChild(del);
+
+    function field(labelText, el){
+      const l = document.createElement('label');
+      l.className = 'mini-label';
+      l.textContent = labelText;
+      card.appendChild(l);
+      card.appendChild(el);
+    }
+
+    const nameI = document.createElement('input');
+    nameI.type = 'text';
+    nameI.className = 'f-name';
+    nameI.placeholder = 'Ej: Anécdotas';
+    nameI.value = note.name || '';
+    nameI.autocomplete = 'off';
+    field('NOMBRE DEL BOTÓN', nameI);
+
+    const fileI = document.createElement('input');
+    fileI.type = 'text';
+    fileI.className = 'f-file';
+    fileI.placeholder = 'Ej: Carpeta/Mi nota';
+    fileI.value = note.file || '';
+    fileI.autocomplete = 'off';
+    fileI.autocapitalize = 'off';
+    fileI.spellcheck = false;
+    field('RUTA DE LA NOTA (SIN .md)', fileI);
+
+    const modeS = document.createElement('select');
+    modeS.className = 'f-mode';
+    [['prepend','Al principio de la nota'],['append','Al final de la nota']].forEach(([v,t]) => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = t;
+      modeS.appendChild(o);
+    });
+    modeS.value = note.mode === 'append' ? 'append' : 'prepend';
+    field('DÓNDE INSERTAR', modeS);
+
+    notesList.appendChild(card);
+    renumberRows();
+  }
+
+  function renumberRows(){
+    [...notesList.children].forEach((card, i) => {
+      card.querySelector('.num').textContent = 'NOTA ' + (i + 1);
+    });
+  }
+
+  function openSetup(){
+    const firstTime = !config;
+    setupTitle.textContent = firstTime ? 'CONFIGURACIÓN INICIAL' : 'CONFIGURAR NOTAS';
+    cancelBtn.style.display = firstTime ? 'none' : '';
+    errorMsg.textContent = '';
+    vaultInput.value = config ? config.vault : '';
+    notesList.innerHTML = '';
+    if (config) config.notes.forEach(addNoteRow);
+    else addNoteRow();
+    modalBg.classList.add('open');
+    modalBg.scrollTop = 0;
+  }
+
+  function closeSetup(){
+    modalBg.classList.remove('open');
+  }
+
+  function cleanPath(p){
+    return p.trim().replace(/^\/+/, '').replace(/\.md$/i, '');
+  }
+
+  function saveSetup(){
+    const vault = vaultInput.value.trim();
+    if (!vault){
+      errorMsg.textContent = 'FALTA EL NOMBRE DEL VAULT';
+      vaultInput.focus();
+      return;
+    }
+    const notes = [];
+    for (const card of notesList.children){
+      const file = cleanPath(card.querySelector('.f-file').value);
+      let name = card.querySelector('.f-name').value.trim();
+      const mode = card.querySelector('.f-mode').value;
+      if (!file && !name) continue; // fila vacía: se ignora
+      if (!file){
+        errorMsg.textContent = 'TODAS LAS NOTAS NECESITAN UNA RUTA';
+        card.querySelector('.f-file').focus();
+        return;
+      }
+      if (!name) name = file.split('/').pop();
+      notes.push({ name, file, mode });
+    }
+    if (!notes.length){
+      errorMsg.textContent = 'AÑADE AL MENOS UNA NOTA';
+      return;
+    }
+
+    config = { vault, notes };
+    saveConfig(config);
+    sessionLog = notes.map(() => []);
+    activeIndex = 0;
+    closeSetup();
+    render();
+  }
+
+  document.getElementById('addNoteBtn').addEventListener('click', () => {
+    addNoteRow();
+    const cards = notesList.children;
+    cards[cards.length - 1].querySelector('.f-name').focus();
+  });
+  document.getElementById('saveBtn').addEventListener('click', saveSetup);
+  cancelBtn.addEventListener('click', closeSetup);
+  document.getElementById('cfgBtn').addEventListener('click', openSetup);
+
+  /* ---------- Arranque ---------- */
+  if (config) sessionLog = config.notes.map(() => []);
+  render();
+  if (!config) openSetup();   // primera vez: lanzar asistente
+</script>
+</body>
+</html>
