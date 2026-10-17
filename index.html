@@ -562,6 +562,16 @@
       card.appendChild(el);
     }
 
+    // Atajo: pegar la URI copiada desde Advanced URI y rellenar vault + ruta solos
+    const uriI = document.createElement('input');
+    uriI.type = 'text';
+    uriI.className = 'f-uri';
+    uriI.placeholder = 'obsidian://adv-uri?vault=...';
+    uriI.autocomplete = 'off';
+    uriI.autocapitalize = 'off';
+    uriI.spellcheck = false;
+    field('PEGAR URI DE ADVANCED URI (ATAJO)', uriI);
+
     const nameI = document.createElement('input');
     nameI.type = 'text';
     nameI.className = 'f-name';
@@ -589,6 +599,28 @@
     });
     modeS.value = note.mode === 'append' ? 'append' : 'prepend';
     field('DÓNDE INSERTAR', modeS);
+
+    function applyPastedUri(){
+      const s = uriI.value.trim();
+      if (!s) return;
+      try{
+        const u = new URL(s);
+        const vault = u.searchParams.get('vault');
+        const fp = u.searchParams.get('filepath');
+        if (!fp) throw new Error('sin filepath');
+        // decodeURIComponent respeta los caracteres exactos del vault (acentos incluidos)
+        if (vault) vaultInput.value = vault;
+        fileI.value = cleanPath(fp);
+        if (!nameI.value.trim()) nameI.value = fileI.value.split('/').pop();
+        uriI.value = '';
+        uriI.placeholder = 'OK: vault y ruta rellenados';
+        errorMsg.textContent = '';
+      }catch(e){
+        errorMsg.textContent = 'URI NO VÁLIDA: COPIA LA DE ADVANCED URI';
+      }
+    }
+    uriI.addEventListener('change', applyPastedUri);
+    uriI.addEventListener('paste', () => setTimeout(applyPastedUri, 0));
 
     notesList.appendChild(card);
     renumberRows();
