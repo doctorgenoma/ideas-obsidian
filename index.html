@@ -311,6 +311,21 @@
   }
   .btn-del:active{ box-shadow:0 1px 0 var(--purple); transform:translateY(2px); }
 
+  .counter-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:8px;
+  }
+  .counter-row .hint{ margin:0; flex:1; }
+  .btn-resetnum{
+    font-size:7px;
+    padding:8px 6px;
+    background:var(--light-gray);
+    box-shadow:0 3px 0 var(--dark-gray);
+  }
+  .btn-resetnum:active{ box-shadow:0 1px 0 var(--dark-gray); transform:translateY(2px); }
+
   .btn-addnote{
     width:100%;
     margin-top:12px;
@@ -416,7 +431,7 @@
 <div class="modal-bg" id="modalBg">
   <div class="modal">
     <h2 id="setupTitle">CONFIGURACIÓN INICIAL</h2>
-    <p>Esta app usa el plugin comunitario <code>Advanced URI</code> de Obsidian (Ajustes → Community plugins) para insertar tus ideas como tareas (<code>- [ ] texto</code>) al principio o al final de cada nota.</p>
+    <p>Esta app usa el plugin comunitario <code>Advanced URI</code> de Obsidian (Ajustes → Community plugins) para insertar tus ideas al principio o al final de cada nota, con el formato de línea que elijas.</p>
 
     <label class="field-label" for="vaultInput">NOMBRE DEL VAULT</label>
     <input type="text" id="vaultInput" placeholder="Ej: Podcasting" autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -446,6 +461,8 @@
       <p><code>Nombre del botón</code> → lo que verás en la app. Si lo dejas vacío se usa el nombre del archivo.</p>
       <p><code>Ruta de la nota</code> → relativa a la raíz del vault y sin ".md". Ej: <code>Carpeta/Mi nota</code>.</p>
       <p><code>Dónde insertar</code> → "Al principio" (la idea más reciente arriba) o "Al final".</p>
+      <p><code>Formato de línea</code> → "Checklist" (<code>- [ ] texto</code>, con casilla marcable), "Guion simple" (<code>- texto</code>) o "Numerado" (<code>1. texto</code>, <code>2. texto</code>...).</p>
+      <p>La numeración se cuenta en este dispositivo: si editas la nota a mano en Obsidian, los números pueden descuadrarse. Usa "REINICIAR Nº" si quieres volver a empezar desde 1.</p>
       <p>Puedes volver a editar todo con el botón ⚙. La configuración se guarda en este dispositivo y navegador.</p>
     </details>
 
@@ -466,7 +483,17 @@
   ============================================================ */
   const STORAGE_KEY = 'ideaVaultConfig.v1';
 
-  let config = loadConfig();   // { vault: string, notes: [{name,file,mode}] } | null
+  // Formatos de línea disponibles. Cada nota guarda cuál usa en note.format.
+  const LINE_FORMATS = {
+    checklist: { label: 'Checklist (- [ ] texto)',      build: (text, note) => `- [ ] ${text}` },
+    dash:      { label: 'Guion simple (- texto)',        build: (text, note) => `- ${text}` },
+    numbered:  { label: 'Numerado (1. texto, 2. texto…)', build: (text, note) => {
+                   note.counter = (note.counter || 0) + 1;
+                   return `${note.counter}. ${text}`;
+                 } }
+  };
+
+  let config = loadConfig();   // { vault: string, notes: [{name,file,mode,format,counter}] } | null
   let activeIndex = 0;
   let sessionLog = [];
 
@@ -560,15 +587,24 @@
 
     const note = config.notes[activeIndex];
     const mode = note.mode === 'append' ? 'append' : 'prepend';
+    const fmt  = LINE_FORMATS[note.format] ? note.format : 'checklist';
 
-    // Tarea de Obsidian con casilla marcable
-    const data = `- [ ] ${text}\n`;
+    // Construye la línea según el formato elegido (puede incrementar note.counter)
+    const line = LINE_FORMATS[fmt].build(text, note);
+
+    // OJO: no añadimos aquí ningún "\n" extra. Advanced URI ya inserta un
+    // salto de línea propio al prepend/append; si nosotros añadimos otro,
+    // aparece una línea en blanco entre una idea y la siguiente.
+    const data = line;
 
     // encodeURIComponent a mano (no URLSearchParams): este último codifica
     // los espacios como "+" y Obsidian los interpretaría literalmente.
     const uri = `obsidian://advanced-uri?vault=${encodeURIComponent(config.vault)}&filepath=${encodeURIComponent(note.file)}&data=${encodeURIComponent(data)}&mode=${mode}`;
 
     window.location.href = uri;
+
+    // Persistimos el contador (formato "numerado") para la próxima idea
+    saveConfig(config);
 
     sessionLog[activeIndex].push(text);
     renderLog();
@@ -588,9 +624,12 @@
 
   /* ---------- Asistente de configuración ---------- */
   function addNoteRow(note){
-    note = note || { name:'', file:'', mode:'prepend' };
+    note = note || { name:'', file:'', mode:'prepend', format:'checklist', counter:0 };
     const card = document.createElement('div');
     card.className = 'note-card';
+    // Guardamos el contador actual en el propio elemento: así se conserva
+    // al editar la configuración sin reiniciarlo por accidente.
+    card.dataset.counter = String(note.counter || 0);
 
     const num = document.createElement('div');
     num.className = 'num';
@@ -652,6 +691,40 @@
     });
     modeS.value = note.mode === 'append' ? 'append' : 'prepend';
     field('DÓNDE INSERTAR', modeS);
+
+    const formatS = document.createElement('select');
+    formatS.className = 'f-format';
+    Object.entries(LINE_FORMATS).forEach(([v, def]) => {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = def.label;
+      formatS.appendChild(o);
+    });
+    formatS.value = LINE_FORMATS[note.format] ? note.format : 'checklist';
+    field('FORMATO DE LÍNEA', formatS);
+
+    // Fila con el contador actual (solo relevante para "Numerado") y botón de reinicio
+    const counterRow = document.createElement('div');
+    counterRow.className = 'counter-row';
+    const counterHint = document.createElement('p');
+    counterHint.className = 'hint';
+    counterHint.textContent = 'Próximo número: ' + (parseInt(card.dataset.counter, 10) + 1);
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'btn-resetnum';
+    resetBtn.textContent = 'REINICIAR Nº';
+    resetBtn.addEventListener('click', () => {
+      card.dataset.counter = '0';
+      counterHint.textContent = 'Próximo número: 1';
+    });
+    counterRow.appendChild(counterHint);
+    counterRow.appendChild(resetBtn);
+    card.appendChild(counterRow);
+
+    function toggleCounterRow(){
+      counterRow.style.display = formatS.value === 'numbered' ? 'flex' : 'none';
+    }
+    formatS.addEventListener('change', toggleCounterRow);
+    toggleCounterRow();
 
     function applyPastedUri(){
       const s = uriI.value.trim();
@@ -718,6 +791,8 @@
       const file = cleanPath(card.querySelector('.f-file').value);
       let name = card.querySelector('.f-name').value.trim();
       const mode = card.querySelector('.f-mode').value;
+      const format = card.querySelector('.f-format').value;
+      const counter = parseInt(card.dataset.counter, 10) || 0;
       if (!file && !name) continue; // fila vacía: se ignora
       if (!file){
         errorMsg.textContent = 'TODAS LAS NOTAS NECESITAN UNA RUTA';
@@ -725,7 +800,7 @@
         return;
       }
       if (!name) name = file.split('/').pop();
-      notes.push({ name, file, mode });
+      notes.push({ name, file, mode, format, counter });
     }
     if (!notes.length){
       errorMsg.textContent = 'AÑADE AL MENOS UNA NOTA';
